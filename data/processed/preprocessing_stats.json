@@ -1,0 +1,14 @@
+{
+  "num_documents": 5,
+  "num_paragraphs": 4067,
+  "avg_paragraph_length": 60.6459306614212,
+  "vocab_size": 7100,
+  "doc_type_counts": {
+    "petition_brief": 1403,
+    "slip_opinion": 318,
+    "amicus_brief": 1061,
+    "district_opinion": 499,
+    "sec_filing": 786
+  },
+  "output_path": "/home/neel/Desktop/Custom Embedding/data/processed/paragraphs.jsonl"
+}
