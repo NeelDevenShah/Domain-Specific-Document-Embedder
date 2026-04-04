@@ -73,19 +73,22 @@ def nearest_neighbors(
 def evaluate(
     domain_emb: np.ndarray = None,
     baseline_emb: np.ndarray = None,
+    embedding_sets: dict[str, np.ndarray] = None,
     output_dir: Path = OUTPUTS,
 ) -> dict:
     """
-    Compute 5+ metrics comparing domain vs baseline embeddings.
+    Compute 5+ metrics comparing embedding sets.
 
     Returns metrics dict saved to outputs/metrics.json.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if domain_emb is None:
-        domain_emb = np.load(output_dir / "domain_embeddings.npy")
-    if baseline_emb is None:
-        baseline_emb = np.load(output_dir / "baseline_embeddings.npy")
+    if embedding_sets is None:
+        if domain_emb is None:
+            domain_emb = np.load(output_dir / "domain_embeddings.npy")
+        if baseline_emb is None:
+            baseline_emb = np.load(output_dir / "baseline_embeddings.npy")
+        embedding_sets = {"domain": domain_emb, "baseline": baseline_emb}
 
     with (output_dir / "embedding_metadata.json").open() as f:
         meta = json.load(f)
@@ -101,7 +104,7 @@ def evaluate(
     true_int = np.array([label_map[t] for t in true_labels])
 
     metrics = {}
-    for name, emb in [("domain", domain_emb), ("baseline", baseline_emb)]:
+    for name, emb in embedding_sets.items():
         labels = np.array(clusters[name]["kmeans_labels"])
         normed = normalize(emb)
 
@@ -119,8 +122,8 @@ def evaluate(
     # Nearest-neighbor sanity checks (3 samples per embedder)
     sample_indices = [0, len(texts) // 3, 2 * len(texts) // 3]
     metrics["nearest_neighbors"] = {
-        "domain": nearest_neighbors(domain_emb, texts, ids, sample_indices),
-        "baseline": nearest_neighbors(baseline_emb, texts, ids, sample_indices),
+        name: nearest_neighbors(emb, texts, ids, sample_indices)
+        for name, emb in embedding_sets.items()
     }
 
     metrics_path = output_dir / "metrics.json"
@@ -128,7 +131,7 @@ def evaluate(
         json.dump(metrics, f, indent=2)
 
     print("\n=== Evaluation Metrics ===")
-    for name in ["domain", "baseline"]:
+    for name in embedding_sets:
         m = metrics[name]
         print(f"\n{name.upper()}:")
         print(f"  Silhouette:        {m['silhouette_score']:.4f}")

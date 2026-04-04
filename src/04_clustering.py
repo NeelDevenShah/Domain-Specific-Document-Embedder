@@ -27,37 +27,51 @@ def find_optimal_k(embeddings: np.ndarray, k_range: range = range(2, 8)) -> int:
     return best_k
 
 
+def agglomerative_cosine(n_clusters: int) -> AgglomerativeClustering:
+    """Create cosine agglomerative clustering across scikit-learn API versions."""
+    try:
+        return AgglomerativeClustering(
+            n_clusters=n_clusters, metric="cosine", linkage="average"
+        )
+    except TypeError:
+        return AgglomerativeClustering(
+            n_clusters=n_clusters, affinity="cosine", linkage="average"
+        )
+
+
 def cluster(
     domain_emb: np.ndarray = None,
     baseline_emb: np.ndarray = None,
+    embedding_sets: dict[str, np.ndarray] = None,
     output_dir: Path = OUTPUTS,
     n_clusters: int = None,
 ) -> dict:
     """
-    Run KMeans and Agglomerative clustering on both embedding sets.
+    Run KMeans and Agglomerative clustering on embedding sets.
 
     Returns cluster labels and chosen k.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if domain_emb is None:
-        domain_emb = np.load(output_dir / "domain_embeddings.npy")
-    if baseline_emb is None:
-        baseline_emb = np.load(output_dir / "baseline_embeddings.npy")
+    if embedding_sets is None:
+        if domain_emb is None:
+            domain_emb = np.load(output_dir / "domain_embeddings.npy")
+        if baseline_emb is None:
+            baseline_emb = np.load(output_dir / "baseline_embeddings.npy")
+        embedding_sets = {"domain": domain_emb, "baseline": baseline_emb}
 
     if n_clusters is None:
-        n_clusters = find_optimal_k(domain_emb)
+        first_emb = next(iter(embedding_sets.values()))
+        n_clusters = find_optimal_k(first_emb)
     print(f"Using k={n_clusters} clusters")
 
     results = {}
-    for name, emb in [("domain", domain_emb), ("baseline", baseline_emb)]:
+    for name, emb in embedding_sets.items():
         normed = normalize(emb)
         kmeans_labels = KMeans(
             n_clusters=n_clusters, random_state=RANDOM_STATE, n_init=10
         ).fit_predict(normed)
-        agg_labels = AgglomerativeClustering(
-            n_clusters=n_clusters, affinity="cosine", linkage="average"
-        ).fit_predict(normed)
+        agg_labels = agglomerative_cosine(n_clusters).fit_predict(normed)
 
         results[name] = {
             "kmeans_labels": kmeans_labels.tolist(),
