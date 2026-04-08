@@ -57,6 +57,26 @@ Build and evaluate a domain-specific embedder trained on legal PDF documents, co
 - Baseline MiniLM produces more dispersed embeddings with lower absolute similarities, but better weak alignment with document-type labels.
 - For a production legal search/RAG system, a hybrid approach (domain Word2Vec + MiniLM concatenation, or fine-tuned legal BERT) would likely outperform either alone.
 
+## Diagnostic: Which document types cluster well?
+
+Cross-tabulating KMeans cluster assignments against actual document types (outputs/2, finetuned) reveals **asymmetric recovery**:
+
+| Doc Type | Dominant cluster | Purity | Note |
+|---|---|---|---|
+| SEC filing | **Cluster 4** | **75.2%** | Highly distinctive vocabulary; nearly pure cluster |
+| District opinion | **Cluster 0** | 64.3% | Court-specific phrasing; some bleed into slip_opinion domain |
+| Slip opinion | **Cluster 3** | 67.0% | Also court-specific, but overlaps with briefs (amicus 42.3%, petition 38.1% in this cluster) |
+| Petition brief | **Cluster 1** | 48.0% | Similar formulae to amicus briefs; heavy overlap (amicus also 42.0% here) |
+| Amicus brief | **Clusters 1, 3** | N/A | Scattered across 1 and 3; most similar to petition briefs |
+
+**Interpretation:** The fine-tuned model isolates one distinctive category (SEC filings) very cleanly, which explains the beautiful red cluster (Cluster 4) visible in `02_pca_finetuned_clusters.png`. The court documents (briefs, opinions) remain entangled because they share core legal-formulaic language ("pursuant to," "Rule 10b-5," etc.) at such high density that the model's learned distinctions among them are subtle. This actually strengthens your epoch-ablation story: ARI/NMI climb because the model *does* get systematically better at recovering doc categories, but it's capturing real structure (SEC filings are different) plus finer-grained patterns (court opinionated vs. advocate-written briefs) that don't split 5 ways cleanly in high-dimensional space. The plateau at epoch 35-50 reflects having learned most of the low-hanging fruit (SEC separation) and then making incremental gains on harder distinctions.
+
+**Visualization note:** The PCA plot's visual imbalance (one clean cluster, four overlapping ones) is the correct story — not a visualization artifact. The fine-tuned model literally has learned to isolate SEC filings while the others remain harder to separate, which is exactly why its internal silhouette score is lower despite ARI/NMI being higher: silhouette rewards geometric neatness, ARI/NMI reward semantic correctness. This is the point.
+
+## Visualization: t-SNE vs. silhouette apparent contradiction
+
+The t-SNE plot (`03_tsne_comparison.png`) visually shows the fine-tuned embeddings with more distinct regional clustering than the plain embeddings, while the silhouette score and Davies-Bouldin index both move in the opposite direction (worse geometry). This is not a contradiction — it reflects a fundamental property of t-SNE: the algorithm exaggerates local neighborhood structure and emphasizes cluster boundaries at the expense of preserving global geometric relationships. A fine-tuned model that's learned to pull semantically-correct-but-geometrically-dispersed documents together will appear crisp in t-SNE (which amplifies local separation) while having worse high-dimensional silhouette scores (which measure global cluster cohesion). Bottom line: t-SNE is excellent for visual inspection but should not be the primary metric for cluster quality; the internal metrics (silhouette, DBI) and label-alignment metrics (ARI, NMI) are more trustworthy for quantitative claims.
+
 ## Fine-tuning duration ablation (outputs/3)
 
 The 3-epoch fine-tune in `outputs/2` was extended to 50 epochs, evaluating every 5 epochs against the fixed plain-MiniLM baseline (`src/continue_minilm_to_50.py`). This isolates one question: does longer fine-tuning keep helping, or does it overfit?
