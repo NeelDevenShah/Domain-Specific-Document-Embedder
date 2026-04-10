@@ -5,7 +5,8 @@ from pathlib import Path
 
 from gensim.models import Word2Vec
 
-from config import DATA_PROCESSED, EMBEDDING_DIM, MODELS, RANDOM_STATE
+import config
+from config import DATA_PROCESSED, EMBEDDING_DIM, RANDOM_STATE
 
 
 def tokenize(text: str) -> list[str]:
@@ -25,7 +26,7 @@ def load_corpus(processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl") -> l
 
 def train_embedder(
     processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl",
-    model_dir: Path = MODELS,
+    model_dir: Path = None,
     vector_size: int = EMBEDDING_DIM,
 ) -> Path:
     """
@@ -33,6 +34,7 @@ def train_embedder(
 
     Returns path to saved model.
     """
+    model_dir = model_dir or config.MODELS
     model_dir.mkdir(parents=True, exist_ok=True)
     sentences = load_corpus(processed_path)
 

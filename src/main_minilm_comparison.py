@@ -12,6 +12,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import config
+# Update it based on the experiment number that you are performing
+config.set_run_id("2")
+
 finetune_mod = import_module("02b_finetune_minilm")
 generate_mod = import_module("03b_generate_minilm_comparison")
 clustering_mod = import_module("04_clustering")
@@ -48,7 +52,7 @@ def main():
     print("\n" + "=" * 60)
     print(f"Pipeline complete in {elapsed:.1f}s")
     print("  Comparison: plain all-MiniLM-L6-v2 vs fine-tuned all-MiniLM-L6-v2")
-    print("  Outputs saved to: outputs/2/")
+    print(f"  Outputs saved to: {config.OUTPUTS}/")
     print("=" * 60)
 
     return metrics

@@ -5,11 +5,21 @@ DATA_RAW = PROJECT_ROOT / "data"
 DATA_PROCESSED = PROJECT_ROOT / "data" / "processed"
 
 # Experiment output directory (1 = Word2Vec vs plain MiniLM, 2 = plain vs finetuned MiniLM)
-RUN_ID = "2"
+RUN_ID = "1"
 OUTPUTS = PROJECT_ROOT / "outputs" / RUN_ID
 FIGURES = OUTPUTS / "figures"
 MODELS = OUTPUTS / "models"
 FINETUNED_MODEL_DIR = MODELS / "finetuned_minilm"
+
+
+def set_run_id(run_id: str) -> None:
+    """Point pipeline outputs at outputs/<run_id>/. Call before importing stage modules."""
+    global RUN_ID, OUTPUTS, FIGURES, MODELS, FINETUNED_MODEL_DIR
+    RUN_ID = run_id
+    OUTPUTS = PROJECT_ROOT / "outputs" / RUN_ID
+    FIGURES = OUTPUTS / "figures"
+    MODELS = OUTPUTS / "models"
+    FINETUNED_MODEL_DIR = MODELS / "finetuned_minilm"
 
 EMBEDDING_DIM = 100
 BASELINE_MODEL = "all-MiniLM-L6-v2"

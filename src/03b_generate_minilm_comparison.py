@@ -6,29 +6,25 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from config import BASELINE_MODEL, DATA_PROCESSED, FINETUNED_MODEL_DIR, OUTPUTS
-
-
-def load_paragraphs(processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl") -> list[dict]:
-    records = []
-    with processed_path.open(encoding="utf-8") as f:
-        for line in f:
-            records.append(json.loads(line))
-    return records
+import config
+from config import BASELINE_MODEL, DATA_PROCESSED
+from io_utils import load_paragraph_records
 
 
 def generate_minilm_comparison(
     processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl",
-    finetuned_model_dir: Path = FINETUNED_MODEL_DIR,
-    output_dir: Path = OUTPUTS,
+    finetuned_model_dir: Path = None,
+    output_dir: Path = None,
 ) -> dict:
     """
     Embed corpus with plain (pretrained) and fine-tuned MiniLM.
 
     Returns embedding arrays and metadata.
     """
+    finetuned_model_dir = finetuned_model_dir or config.FINETUNED_MODEL_DIR
+    output_dir = output_dir or config.OUTPUTS
     output_dir.mkdir(parents=True, exist_ok=True)
-    records = load_paragraphs(processed_path)
+    records = load_paragraph_records(processed_path)
     texts = [r["text"] for r in records]
 
     print(f"Loading plain model: {BASELINE_MODEL}")
@@ -61,4 +57,5 @@ def generate_minilm_comparison(
 
 
 if __name__ == "__main__":
+    config.set_run_id("2")
     generate_minilm_comparison()

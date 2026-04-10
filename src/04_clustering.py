@@ -8,7 +8,8 @@ from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import normalize
 
-from config import OUTPUTS, RANDOM_STATE
+import config
+from config import RANDOM_STATE
 
 
 def find_optimal_k(embeddings: np.ndarray, k_range: range = range(2, 8)) -> int:
@@ -43,7 +44,7 @@ def cluster(
     domain_emb: np.ndarray = None,
     baseline_emb: np.ndarray = None,
     embedding_sets: dict[str, np.ndarray] = None,
-    output_dir: Path = OUTPUTS,
+    output_dir: Path = None,
     n_clusters: int = None,
 ) -> dict:
     """
@@ -51,6 +52,7 @@ def cluster(
 
     Returns cluster labels and chosen k.
     """
+    output_dir = output_dir or config.OUTPUTS
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if embedding_sets is None:

@@ -11,17 +11,17 @@ from sklearn.manifold import TSNE
 from sklearn.metrics import silhouette_samples
 from sklearn.preprocessing import normalize
 
-from config import FIGURES, OUTPUTS, RANDOM_STATE
+import config
+from config import RANDOM_STATE
 
 
 def plot_cluster_scatter(
     embeddings: np.ndarray,
     labels: np.ndarray,
-    doc_types: list[str],
     title: str,
     save_path: Path,
 ):
-    """2D PCA scatter colored by cluster, with doc-type markers."""
+    """2D PCA scatter colored by cluster label."""
     pca = PCA(n_components=2, random_state=RANDOM_STATE)
     coords = pca.fit_transform(normalize(embeddings))
 
@@ -61,15 +61,30 @@ def display_name(name: str) -> str:
     return DISPLAY_NAMES.get(name, name.replace("_", " ").title())
 
 
+def tsne_project(embeddings: np.ndarray) -> np.ndarray:
+    """Project embeddings to 2D with t-SNE across scikit-learn API versions."""
+    normed = normalize(embeddings)
+    perplexity = min(30, max(2, len(normed) - 1))
+    kwargs = {
+        "n_components": 2,
+        "random_state": RANDOM_STATE,
+        "perplexity": perplexity,
+        "init": "pca",
+        "learning_rate": 200.0,
+    }
+    try:
+        return TSNE(max_iter=1000, **kwargs).fit_transform(normed)
+    except TypeError:
+        return TSNE(n_iter=1000, **kwargs).fit_transform(normed)
+
+
 def plot_tsne_comparison(embedding_sets, cluster_labels, save_path: Path):
     """Side-by-side t-SNE of embedding clusters."""
-    tsne = TSNE(n_components=2, random_state=RANDOM_STATE, perplexity=30, n_iter=1000)
-
     n_plots = len(embedding_sets)
     fig, axes = plt.subplots(1, n_plots, figsize=(8 * n_plots, 7), squeeze=False)
     for ax, (name, emb) in zip(axes[0], embedding_sets.items()):
         labels = cluster_labels[name]
-        coords = tsne.fit_transform(normalize(emb))
+        coords = tsne_project(emb)
         scatter = ax.scatter(
             coords[:, 0], coords[:, 1], c=labels, cmap="tab10", alpha=0.6, s=25
         )
@@ -176,8 +191,10 @@ def plot_similarity_heatmap(
     plt.close(fig)
 
 
-def visualize(output_dir: Path = OUTPUTS, figures_dir: Path = FIGURES) -> list[str]:
+def visualize(output_dir: Path = None, figures_dir: Path = None) -> list[str]:
     """Generate all required visualizations. Returns list of saved figure paths."""
+    output_dir = output_dir or config.OUTPUTS
+    figures_dir = figures_dir or config.FIGURES
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     with (output_dir / "embedding_metadata.json").open() as f:
@@ -203,13 +220,22 @@ def visualize(output_dir: Path = OUTPUTS, figures_dir: Path = FIGURES) -> list[s
             (
                 f"{idx:02d}_pca_{name}_clusters.png",
                 plot_cluster_scatter,
-                (embedding_sets[name], cluster_labels[name], doc_types, f"{title} — PCA Clusters"),
+                (embedding_sets[name], cluster_labels[name], f"{title} — PCA Clusters"),
             )
         )
 
+    figure_specs.append(
+        ("03_tsne_comparison.png", plot_tsne_comparison, (embedding_sets, cluster_labels))
+    )
+    for name in model_names:
+        figure_specs.append(
+            (
+                f"04_silhouette_{name}.png",
+                plot_silhouette,
+                (embedding_sets[name], cluster_labels[name], display_name(name)),
+            )
+        )
     figure_specs.extend([
-        ("03_tsne_comparison.png", plot_tsne_comparison, (embedding_sets, cluster_labels)),
-        (f"04_silhouette_{model_names[0]}.png", plot_silhouette, (embedding_sets[model_names[0]], cluster_labels[model_names[0]], display_name(model_names[0]))),
         ("05_metrics_comparison.png", plot_metrics_comparison, (metrics,)),
         ("06_doc_type_distribution.png", plot_doc_type_distribution, (doc_types,)),
     ])

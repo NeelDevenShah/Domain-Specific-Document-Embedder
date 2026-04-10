@@ -9,12 +9,14 @@ Usage (with conda base):
 
 import sys
 import time
+from importlib import import_module
 from pathlib import Path
 
-# Ensure src is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from importlib import import_module
+import config
+# Update it based on the experiment number that you are performing
+config.set_run_id("1")
 
 preprocessing = import_module("01_preprocessing")
 train_embedder_mod = import_module("02_train_domain_embedder")
@@ -64,8 +66,8 @@ def main():
     print("\n" + "=" * 60)
     print(f"Pipeline complete in {elapsed:.1f}s")
     print(f"  Paragraphs processed: {stats['num_paragraphs']}")
-    print(f"  Figures saved to: outputs/figures/")
-    print(f"  Metrics saved to: outputs/metrics.json")
+    print(f"  Figures saved to: {config.FIGURES}/")
+    print(f"  Metrics saved to: {config.OUTPUTS / 'metrics.json'}")
     print("=" * 60)
 
     return metrics

@@ -1,6 +1,5 @@
 """Fine-tune all-MiniLM-L6-v2 on the legal corpus."""
 
-import json
 import random
 from collections import defaultdict
 from pathlib import Path
@@ -8,24 +7,20 @@ from pathlib import Path
 from sentence_transformers import InputExample, SentenceTransformer, losses
 from torch.utils.data import DataLoader
 
+import config
 from config import (
     BASELINE_MODEL,
     DATA_PROCESSED,
     FINETUNE_BATCH_SIZE,
     FINETUNE_EPOCHS,
     FINETUNE_MAX_PAIRS_PER_DOC,
-    FINETUNED_MODEL_DIR,
     FINETUNE_WARMUP_STEPS,
     RANDOM_STATE,
 )
+from io_utils import load_paragraph_records
 
 
-def load_paragraphs(processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl") -> list[dict]:
-    records = []
-    with processed_path.open(encoding="utf-8") as f:
-        for line in f:
-            records.append(json.loads(line))
-    return records
+load_paragraphs = load_paragraph_records
 
 
 def build_training_pairs(records: list[dict], max_pairs_per_doc: int = FINETUNE_MAX_PAIRS_PER_DOC) -> list[InputExample]:
@@ -44,10 +39,16 @@ def build_training_pairs(records: list[dict], max_pairs_per_doc: int = FINETUNE_
     for texts in by_source.values():
         if len(texts) < 2:
             continue
-        pairs = [(texts[i], texts[j]) for i in range(len(texts)) for j in range(i + 1, len(texts))]
-        random.shuffle(pairs)
-        for a, b in pairs[:max_pairs_per_doc]:
-            examples.append(InputExample(texts=[a, b]))
+        max_possible = len(texts) * (len(texts) - 1) // 2
+        target_pairs = min(max_pairs_per_doc, max_possible)
+        seen_pairs: set[tuple[int, int]] = set()
+
+        while len(seen_pairs) < target_pairs:
+            i, j = sorted(random.sample(range(len(texts)), 2))
+            if (i, j) in seen_pairs:
+                continue
+            seen_pairs.add((i, j))
+            examples.append(InputExample(texts=[texts[i], texts[j]]))
 
     random.shuffle(examples)
     return examples
@@ -55,7 +56,7 @@ def build_training_pairs(records: list[dict], max_pairs_per_doc: int = FINETUNE_
 
 def finetune_minilm(
     processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl",
-    output_dir: Path = FINETUNED_MODEL_DIR,
+    output_dir: Path = None,
     base_model: str = BASELINE_MODEL,
     epochs: int = FINETUNE_EPOCHS,
     batch_size: int = FINETUNE_BATCH_SIZE,
@@ -65,6 +66,7 @@ def finetune_minilm(
 
     Returns path to saved fine-tuned model.
     """
+    output_dir = output_dir or config.FINETUNED_MODEL_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     records = load_paragraphs(processed_path)
     train_examples = build_training_pairs(records)
@@ -89,4 +91,5 @@ def finetune_minilm(
 
 
 if __name__ == "__main__":
+    config.set_run_id("2")
     finetune_minilm()

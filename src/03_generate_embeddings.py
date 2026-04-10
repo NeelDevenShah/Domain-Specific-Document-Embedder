@@ -7,15 +7,9 @@ import numpy as np
 from gensim.models import Word2Vec
 from sentence_transformers import SentenceTransformer
 
-from config import BASELINE_MODEL, DATA_PROCESSED, EMBEDDING_DIM, MODELS, OUTPUTS
-
-
-def load_paragraphs(processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl") -> list[dict]:
-    records = []
-    with processed_path.open(encoding="utf-8") as f:
-        for line in f:
-            records.append(json.loads(line))
-    return records
+import config
+from config import BASELINE_MODEL, DATA_PROCESSED
+from io_utils import load_paragraph_records
 
 
 def domain_paragraph_embedding(text: str, model: Word2Vec) -> np.ndarray:
@@ -29,16 +23,18 @@ def domain_paragraph_embedding(text: str, model: Word2Vec) -> np.ndarray:
 
 def generate_embeddings(
     processed_path: Path = DATA_PROCESSED / "paragraphs.jsonl",
-    model_path: Path = MODELS / "domain_word2vec.model",
-    output_dir: Path = OUTPUTS,
+    model_path: Path = None,
+    output_dir: Path = None,
 ) -> dict:
     """
     Generate domain (Word2Vec) and baseline (MiniLM) embeddings.
 
     Returns paths and metadata.
     """
+    model_path = model_path or config.MODELS / "domain_word2vec.model"
+    output_dir = output_dir or config.OUTPUTS
     output_dir.mkdir(parents=True, exist_ok=True)
-    records = load_paragraphs(processed_path)
+    records = load_paragraph_records(processed_path)
     texts = [r["text"] for r in records]
     ids = [r["id"] for r in records]
     doc_types = [r["doc_type"] for r in records]

@@ -14,7 +14,7 @@ from sklearn.metrics import (
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 
-from config import OUTPUTS
+import config
 
 
 def intra_inter_similarity(embeddings: np.ndarray, labels: np.ndarray) -> dict:
@@ -74,13 +74,14 @@ def evaluate(
     domain_emb: np.ndarray = None,
     baseline_emb: np.ndarray = None,
     embedding_sets: dict[str, np.ndarray] = None,
-    output_dir: Path = OUTPUTS,
+    output_dir: Path = None,
 ) -> dict:
     """
     Compute 5+ metrics comparing embedding sets.
 
     Returns metrics dict saved to outputs/metrics.json.
     """
+    output_dir = output_dir or config.OUTPUTS
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if embedding_sets is None:
