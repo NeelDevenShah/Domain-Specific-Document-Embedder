@@ -172,7 +172,7 @@ The experiments have already been run, and the results above are based on the sa
 ```bash
 source ~/anaconda3/etc/profile.d/conda.sh
 conda activate base
-cd "/home/neel/Desktop/Custom Embedding"
+cd "/home/neel/Desktop/# Domain-Specific-Legal-Document-Embedder"
 python src/main.py
 ```
 
