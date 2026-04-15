@@ -2,3 +2,5 @@
 *.pyc
 *.model
 *.npy
+outputs/
+*.zip
